@@ -14,6 +14,7 @@ mod lib_fs;
 mod lib_log;
 mod lib_constant;
 mod lib_lvm;
+mod lib_config;
 
 
 fn main() {
@@ -28,18 +29,11 @@ fn main() {
 
 
 fn run_app() -> Result<()> {
-    let log_dir = "/mnt/large/restic/logs";
-    let repo_dir = "/mnt/large/restic/repo";
-    let cache_dir = "/mnt/large/restic/cache";
-    let password_file = "/mnt/large/restic/password.txt";
-    let restic_exe = "/mnt/large/restic/restic_0.13.0_linux_amd64";
-
-    let vg = "godel";
-    let lv = "home";
+    let config = lib_config::get();
 
     let run_id = chrono::offset::Local::now().format("%Y_%m%d_%H%M%S").to_string();
 
-    let log_file = PathBuf::from(log_dir);
+    let log_file = PathBuf::from(&config.app.log_dir);
     let log_file = log_file.join(format!("{}.log", run_id));
 
     info!("Starting run {}", &run_id);
@@ -57,18 +51,19 @@ fn run_app() -> Result<()> {
     }
 
     let snapshot = lib_lvm::create_snapshot(
-        vg, lv, &run_id, "100GiB", "/mnt"
+        &config.sources[0].vg, &config.sources[0].lv,
+        &run_id, &config.sources[0].snapshot_size, "/mnt"
     )?;
 
-    let mut restic = Command::new(restic_exe);
+    let mut restic = Command::new(&config.restic.exe_path);
     restic
         .arg("--quiet")
         .arg("--repo")
-        .arg(&repo_dir)
+        .arg(&config.restic.repo_dir)
         .arg("--cache-dir")
-        .arg(cache_dir)
+        .arg(&config.restic.cache_dir)
         .arg("--password-file")
-        .arg(&password_file)
+        .arg(&config.restic.password_file)
         .arg("backup")
         .arg("--one-file-system")
         .arg("--tag")

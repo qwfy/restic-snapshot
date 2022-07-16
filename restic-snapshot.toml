@@ -1,0 +1,13 @@
+[app]
+log_dir = "/mnt/large/restic/logs"
+
+[restic]
+exe_path = "/mnt/large/restic/restic_0.13.0_linux_amd64"
+repo_dir = "/mnt/large/restic/repo"
+cache_dir = "/mnt/large/restic/cache"
+password_file = "/mnt/large/restic/password.txt"
+
+[[sources]]
+vg = "godel"
+lv = "home"
+snapshot_size = "100GiB"
