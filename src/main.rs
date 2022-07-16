@@ -1,3 +1,4 @@
+use std::fmt::format;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
@@ -18,7 +19,7 @@ mod lib_config;
 
 
 fn main() {
-    std::process::exit(match run_app() {
+    std::process::exit(match run_sources() {
         Ok(()) => 0,
         Err(e) => {
             error!("Backup failed: {}", e);
@@ -27,18 +28,25 @@ fn main() {
     });
 }
 
-
-fn run_app() -> Result<()> {
-    let config = lib_config::get();
-
+fn run_sources() -> Result<()> {
     let run_id = chrono::offset::Local::now().format("%Y_%m%d_%H%M%S").to_string();
 
+    // Get the default config file path
+    let exe_path = std::env::current_exe()?;
+    let exe_dir = exe_path.parent().unwrap();
+    let config_file = exe_dir.join("restic-snapshot.toml");
+    let config_file = lib_fs::path_to_string(&config_file)?;
+    lib_config::setup(&config_file);
+    let config = lib_config::get();
+
+    // Setup logging
     let log_file = PathBuf::from(&config.app.log_dir);
     let log_file = log_file.join(format!("{}.log", run_id));
+    lib_log::setup(&lib_fs::path_to_string(&log_file)?, "debug");
 
-    info!("Starting run {}", &run_id);
+    info!("Using run id {}", &run_id);
 
-    info!("Checking the current user");
+    info!("Ensure the current user is root");
     let mut current_user = Command::new("id");
     current_user.arg("-u");
     let current_user_out = lib_cmd::run_success(&mut current_user)?;
@@ -50,9 +58,23 @@ fn run_app() -> Result<()> {
         bail!("To be able to backup files properly, this command need to be run as root");
     }
 
+    for i in 0..config.sources.len() {
+        let one_id = format!("{}-{:02}", &run_id, i);
+
+        // TODO: Continue on error?
+        run_one(i, one_id)?;
+    }
+
+    Ok(())
+}
+
+
+fn run_one(i: usize, run_id: String) -> Result<()> {
+    let config = lib_config::get();
+
     let snapshot = lib_lvm::create_snapshot(
-        &config.sources[0].vg, &config.sources[0].lv,
-        &run_id, &config.sources[0].snapshot_size, "/mnt"
+        &config.sources[i].vg, &config.sources[i].lv,
+        &run_id, &config.sources[i].snapshot_size, "/mnt"
     )?;
 
     let mut restic = Command::new(&config.restic.exe_path);
