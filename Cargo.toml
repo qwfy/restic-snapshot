@@ -1,0 +1,19 @@
+[package]
+name = "restic-snapshot"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+chrono = { version = "0.4" }
+
+# basic application
+log = "0.4"
+fern = "0.6"
+file-rotate = "0.5.0"
+structopt = "0.3"
+thiserror = "1.0"
+anyhow = "1.0"
+indicatif = "0.16"
+regex = "1.5.6"

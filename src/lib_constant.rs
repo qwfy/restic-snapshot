@@ -1,0 +1,1 @@
+pub static EXIT_CODE_GENERAL: i32 = 1;
